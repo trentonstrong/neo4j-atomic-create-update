@@ -1,56 +1,109 @@
 package com.okcupidlabs.neo4j.server.plugins;
 
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+
+import javax.ws.rs.POST;
+import javax.ws.rs.Path;
+import javax.ws.rs.PathParam;
+import javax.ws.rs.HeaderParam;
+import javax.ws.rs.core.Context;
+import javax.ws.rs.core.Response;
+import javax.ws.rs.core.UriInfo;
+import javax.ws.rs.core.MediaType;
+
 import org.neo4j.graphdb.GraphDatabaseService;
 import org.neo4j.graphdb.Node;
 import org.neo4j.graphdb.Relationship;
 import org.neo4j.graphdb.index.IndexHits;
-import org.neo4j.graphdb.index.IndexManager;
-import org.neo4j.graphdb.index.Index;
-import org.neo4j.server.plugins.Description;
-import org.neo4j.server.plugins.Parameter;
-import org.neo4j.server.plugins.PluginTarget;
-import org.neo4j.server.plugins.ServerPlugin;
-import org.neo4j.server.plugins.Source;
-import org.neo4j.server.plugins.Name;
+import org.neo4j.graphdb.index.UniqueFactory;
+import org.neo4j.graphdb.GraphDatabaseService;
+import org.neo4j.kernel.GraphDatabaseAPI;
+import org.neo4j.graphdb.Transaction;
+import org.neo4j.graphdb.TransactionFailureException;
+import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
+import org.neo4j.server.rest.domain.PropertySettingStrategy;
+import org.neo4j.server.rest.repr.BadInputException;
+import org.neo4j.server.rest.repr.InputFormat;
+import org.neo4j.server.rest.repr.NodeRepresentation;
+import org.neo4j.server.rest.repr.OutputFormat;
+import org.neo4j.server.rest.web.DatabaseActions;
+import org.neo4j.server.rest.web.NodeNotFoundException;
+import sun.jvm.hotspot.tools.FinalizerInfo;
 
-@Description("An extensions to the Neo4j Server for atomically creating or updating nodes/edges if they already exist.")
-public class AtomicCreateUpdate extends ServerPlugin {
 
-    @Name("upsert_node")
-    @Description("Creates or patches a node given a unique index key and value for the node.")
-    @PluginTarget(GraphDatabaseService.class)
-    public Node upsertNode(
-            @Source GraphDatabaseService service,
-            @Description("The index name to use")
-                @Parameter(name = "index_name") String indexName,
-            @Description("The index key to use")
-                @Parameter(name = "index_key") String indexKey,
-            @Description("The index value to lookup")
-                @Parameter(name = "index_value") String indexValue)
+//An extension to the Neo4j Server for atomically creating or updating nodes/edges if they already exist.
+@Path("/test")
+public class AtomicCreateUpdate {
+
+    private final UriInfo uriInfo;
+    private final InputFormat input;
+    private final OutputFormat output;
+    private final DatabaseActions actions;
+    private final GraphDatabaseService service;
+    private final PropertySettingStrategy propertySetter;
+
+    public AtomicCreateUpdate(@Context UriInfo uriInfo, @Context InputFormat input,
+                              @Context OutputFormat output, @Context DatabaseActions actions,
+                              @Context GraphDatabaseService service)
     {
-        IndexManager indexManager = service.index();
-        if (!indexManager.existsForNodes(indexName)) {
+        this.uriInfo = uriInfo;
+        this.input = input;
+        this.output = output;
+        this.actions = actions;
+        this.service = service;
+        // NOTE: This is ugly as hell.  I don't want to depend on this cast but I do want
+        // the PropertySettingStrategy instead of re-implementing that functionality.
+        // WHATCHAGONNADO.
+        this.propertySetter = new PropertySettingStrategy((GraphDatabaseAPI)service);
+
+    }
+
+    // Creates or patches a node given a unique index key and value for the node.
+    @POST
+    @Path("/upsert_node/{index_name}/{index_key}/{index_value}")
+    public Response upsertNode(
+                final @HeaderParam("Transaction") ForceMode force,
+                @PathParam("index_name") String indexName,
+                @PathParam("index_key") String indexKey,
+                @PathParam("index_value") String indexValue,
+                String body)
+    {
+        if (!this.service.index().existsForNodes(indexName)) {
             throw new IllegalArgumentException("Index with index_name: " + indexKey + " does not exist.");
         }
-        Index<Node> index = indexManager.forNodes(indexName);
-        IndexHits<Node> hits = index.get(indexKey, indexValue);
 
-        // invariant for a unique index: we should never have multiple hits
-        // this allows us to be promiscuous with the hits iterator down below ;)
-        boolean indexUniqueInvariant = hits.size() <= 1;
-        assert indexUniqueInvariant : hits.size();
-        boolean nodeFound = hits.size() == 1;
+        UniqueFactory<Node> nodeFactory = new UniqueFactory.UniqueNodeFactory(service, indexName)
+        {
+            @Override
+            protected void initialize( Node created, Map<String, Object> properties )
+            {
+                //noop
+            }
+        };
 
-        service.
-        Node upsertedNode = null;
-        if (nodeFound) {
-            upsertedNode = hits.next();
+        Node upsertedNode = nodeFactory.getOrCreate(indexKey, indexValue);
+        try {
+            this.propertySetter.setProperties(upsertedNode, input.readMap(body));
+        } catch (BadInputException e) {
 
+            return output.badRequest(e);
+        } catch (ArrayStoreException e) {
 
-        } else {
-
+            return badJsonFormat(body);
         }
-        return null;
+
+        return output.ok(new NodeRepresentation(upsertedNode));
+    }
+
+    private Response badJsonFormat(String body) {
+        return Response.status( 400 )
+                .type( MediaType.TEXT_PLAIN )
+                .entity( "Invalid JSON array in POST body: " + body )
+                .build();
     }
 
 }
