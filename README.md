@@ -75,3 +75,35 @@ org.neo4j.server.thirdparty_jaxrs_classes=com.okcupidlabs.neo4j.server.plugins=/
 
 This informs the Neo4j server to mount our extension API endpoints anchored from the server root /.  By changing "/" to
 any valid URL path fragment you can mount the extension URLs anywhere you would like.
+
+## Usage
+
+The plugins provides two endpoints, one for 'upserting' nodes and one for 'upconnecting' edges.
+
+### /atomic/upsert/{index_name}/{index_key}/{index_value}
+
+#### Description
+
+Inserts or updates a node, using an index lookup to determine whether or not the node already exists.  If
+the node already exists the properties are merged into the existing node properties, in accordance with a typical PATCH
+operation.
+
+#### Methods
+POST
+
+#### Parameters
+<dl>
+  <dt>index_name
+  <dd>Name of index to use for checking uniqueness.  This index should only contain unique key/value pairs so be sure
+  to maintain this invariant in other modifications to the index.
+
+  <dt>index_key
+  <dd>Index key for uniqueness lookup.
+
+  <dt>index_value
+  <dd>Index value for uniqueness lookup.
+
+  <dt>body
+  <dd>Should be valid JSON containing properties to set on node.
+</dl>
+
