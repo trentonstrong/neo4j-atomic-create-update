@@ -15,6 +15,8 @@ which prevent this type of operation from being implemented client-side.
 Installation is quite simple, but in order to build the extension you will need a working Java environment with Maven2
 already installed.
 
+### Building
+
 First, clone the Git repository locally, then change to the repository directory and issue:
 
 ```
@@ -47,6 +49,8 @@ The important line is:
 ```
 
 which points you to the resulting JAR.
+
+### Install to Neo4j Plugins
 
 Installation of the JAR to Neo4j requires copying the JAR into the Neo4j server's library path and editing a config file
 to inform the Neo4j server of a new package containing API endpoints.
