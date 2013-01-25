@@ -115,7 +115,7 @@ public class AtomicCreateUpdate {
 
         Relationship upconnectedRelationship;
         try {
-            upconnectedRelationship= upconnectNodesAtomic(fromNode, toNode, relationshipType, relationshipProperties);
+            upconnectedRelationship= createOrUpdateRelationship(fromNode, toNode, relationshipType, relationshipProperties);
         } catch (PropertyValueException e) {
             return output.badRequest(e);
         }
@@ -123,7 +123,7 @@ public class AtomicCreateUpdate {
         return output.ok(new RelationshipRepresentation(upconnectedRelationship));
     }
 
-    private Relationship upconnectNodesAtomic(
+    private Relationship createOrUpdateRelationship(
             final Node fromNode,
             final Node toNode,
             final RelationshipType type,
