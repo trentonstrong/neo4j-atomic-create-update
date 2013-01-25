@@ -18,24 +18,56 @@ already installed.
 First, clone the Git repository locally, then change to the repository directory and issue:
 
 ```
-mvn install
+mvn package
 ```
 
 Once the build/test phases complete successfully you should have output like the following:
 
 ```
+Results :
+
+Tests run: 8, Failures: 0, Errors: 0, Skipped: 0
+
 [INFO]
 [INFO] --- maven-jar-plugin:2.3.1:jar (default-jar) @ neo4j-atomic-create-update ---
 [INFO] Building jar: /Users/trentstrong/Development/neo4j-atomic-create-update/target/neo4j-atomic-create-update-0.1.jar
-[INFO]
-[INFO] --- maven-install-plugin:2.3.1:install (default-install) @ neo4j-atomic-create-update ---
-[INFO] Installing /Users/trentstrong/Development/neo4j-atomic-create-update/target/neo4j-atomic-create-update-0.1.jar to /Users/trentstrong/.m2/repository/org/okcupidlabs/neo4j-atomic-create-update/0.1/neo4j-atomic-create-update-0.1.jar
-[INFO] Installing /Users/trentstrong/Development/neo4j-atomic-create-update/pom.xml to /Users/trentstrong/.m2/repository/org/okcupidlabs/neo4j-atomic-create-update/0.1/neo4j-atomic-create-update-0.1.pom
 [INFO] ------------------------------------------------------------------------
 [INFO] BUILD SUCCESS
 [INFO] ------------------------------------------------------------------------
-[INFO] Total time: 5.601s
-[INFO] Finished at: Fri Jan 25 10:28:25 PST 2013
-[INFO] Final Memory: 6M/81M
+[INFO] Total time: 6.124s
+[INFO] Finished at: Fri Jan 25 11:12:46 PST 2013
+[INFO] Final Memory: 14M/81M
 [INFO] ------------------------------------------------------------------------
 ```
+
+The important line is:
+
+```
+[INFO] Building jar: /Users/trentstrong/Development/neo4j-atomic-create-update/target/neo4j-atomic-create-update-0.1.jar
+```
+
+which points you to the resulting JAR.
+
+Installation of the JAR to Neo4j requires copying the JAR into the Neo4j server's library path and editing a config file
+to inform the Neo4j server of a new package containing API endpoints.
+
+Copy the JAR to your server's plugins directory (replace $NEO4J_PATH with your Neo4j install directory)
+
+```
+cp neo4j-atomic-create-update-0.1.jar $NEO4J_PATH/plugins/
+```
+
+then edit $NEO4J_PATH/conf/neo4j-server.properties and find the line
+
+```
+#org.neo4j.server.thirdparty_jaxrs_classes=org.neo4j.examples.server.unmanaged=/examples/unmanaged
+```
+
+uncomment it edit it to look like:
+
+```
+org.neo4j.server.thirdparty_jaxrs_classes=com.okcupidlabs.neo4j.server.plugins=/
+```
+
+This informs the Neo4j server to mount our extension API endpoints anchored from the server root /.  By changing "/" to
+any valid URL path fragment you can mount the extension URLs anywhere you would like.
