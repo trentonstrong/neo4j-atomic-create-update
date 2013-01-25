@@ -81,6 +81,7 @@ any valid URL path fragment you can mount the extension URLs anywhere you would 
 The plugins provides two endpoints, one for 'upserting' nodes and one for 'upconnecting' edges.
 
 ### Upsert
+- - -
 
 /atomic/upsert/{index_name}/{index_key}/{index_value}
 
@@ -111,6 +112,7 @@ POST
 </dl>
 
 ### Upconnect
+- - -
 
 /atomic/upconnect
 
