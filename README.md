@@ -83,7 +83,7 @@ The plugins provides two endpoints, one for 'upserting' nodes and one for 'upcon
 ### Upsert
 - - -
 
-/atomic/upsert/{index_name}/{index_key}/{index_value}
+`/atomic/upsert/{index_name}/{index_key}/{index_value}`
 
 #### Description
 
@@ -114,7 +114,7 @@ POST
 ### Upconnect
 - - -
 
-/atomic/upconnect
+`/atomic/upconnect`
 
 #### Methods
 
