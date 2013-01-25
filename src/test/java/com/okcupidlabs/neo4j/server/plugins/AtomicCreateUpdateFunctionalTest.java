@@ -1,5 +1,8 @@
 package com.okcupidlabs.neo4j.server.plugins;
 
+import java.io.IOException;
+import java.util.HashMap;
+
 import com.sun.jersey.api.client.Client;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.After;
@@ -11,12 +14,6 @@ import org.neo4j.server.NeoServer;
 import org.neo4j.server.helpers.ServerBuilder;
 import org.neo4j.server.rest.JaxRsResponse;
 import org.neo4j.server.rest.RestRequest;
-
-import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 

@@ -1,6 +1,7 @@
 package com.okcupidlabs.neo4j.server.plugins;
 
 import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import static org.mockito.Mockito.*;
 
 import org.codehaus.jackson.map.ObjectMapper;
@@ -12,27 +13,18 @@ import org.neo4j.graphdb.index.Index;
 import org.neo4j.kernel.impl.transaction.xaframework.ForceMode;
 import org.neo4j.server.ServerTestUtils;
 import org.neo4j.server.database.Database;
-import org.neo4j.test.ImpermanentGraphDatabase;
 import org.neo4j.test.server.EntityOutputFormat;
 import org.neo4j.server.rest.domain.GraphDbHelper;
 import org.neo4j.server.rest.web.DatabaseActions;
 import org.neo4j.server.rest.paging.FakeClock;
 import org.neo4j.server.rest.paging.LeaseManager;
 import org.neo4j.server.rest.repr.formats.JsonFormat;
-import javax.ws.rs.core.HttpHeaders;
 import javax.ws.rs.core.Response;
-import javax.ws.rs.core.Response.Status;
 import javax.ws.rs.core.UriInfo;
 import java.net.URI;
 import java.net.URISyntaxException;
 
-
-
-import javax.ws.rs.core.Response;
 import java.io.IOException;
-import java.util.Arrays;
-import java.util.HashSet;
-import java.util.List;
 
 import static org.junit.Assert.assertEquals;
 
@@ -42,6 +34,7 @@ public class AtomicCreateUpdateTest {
     private AtomicCreateUpdate service;
     private ObjectMapper objectMapper = new ObjectMapper();
     private static final RelationshipType KNOWS = DynamicRelationshipType.withName("KNOWS");
+    private static final RelationshipType LIKES = DynamicRelationshipType.withName("LIKES");
     private static Database database;
     private static GraphDbHelper helper;
     private static EntityOutputFormat output;
@@ -124,6 +117,52 @@ public class AtomicCreateUpdateTest {
         assertEquals(updated.getProperty("foo"), "bar");
     }
 
+    @Test
+    public void shouldErrorIfUpconnectMissingParameters() {
+        final Response response = service.upconnectNodes(FORCE, "{\"from\": \"\"}");
+        assertEquals(400, response.getStatus());
+    }
+
+    @Test
+    public void shouldUpconnectTwoNodes() {
+        Node personA = this.graphdb().index().forNodes("people").get("name", "A").getSingle();
+        Node personB = this.graphdb().index().forNodes("people").get("name", "B").getSingle();
+        long personAId = personA.getId();
+        long personBId = personB.getId();
+        final String testRequest = "{" +
+                "\"from\": \"" + makeNodeUrl(personAId) + "\", " +
+                "\"to\": \""   + makeNodeUrl(personBId) + "\", " +
+                "\"relationship_type\": \"" + LIKES.name() + "\", " +
+                "\"properties\": {}"
+                + "}";
+        final Response response = service.upconnectNodes(FORCE, testRequest);
+
+        assertTrue(personA.hasRelationship(LIKES, Direction.OUTGOING));
+        assertTrue(personB.hasRelationship(LIKES, Direction.INCOMING));
+    }
+
+    @Test
+    public void shouldPatchExistingRelationship() {
+        Node personA = this.graphdb().index().forNodes("people").get("name", "A").getSingle();
+        Node personB = this.graphdb().index().forNodes("people").get("name", "B").getSingle();
+        long personAId = personA.getId();
+        long personBId = personB.getId();
+        final String testRequest = "{" +
+                "\"from\": \"" + makeNodeUrl(personAId) + "\", " +
+                "\"to\": \""   + makeNodeUrl(personBId) + "\", " +
+                "\"relationship_type\": \"" + KNOWS.name() + "\", " +
+                "\"properties\": {\"foo\": \"bar\"}"
+                + "}";
+        final Response response = service.upconnectNodes(FORCE, testRequest);
+
+        Relationship relationship = personA.getSingleRelationship(KNOWS, Direction.OUTGOING);
+        assertEquals("bar", relationship.getProperty("foo"));
+    }
+
+    private String makeNodeUrl(long nodeId) {
+        return BASE_URI + "db/data/node/" + nodeId;
+    }
+
     @After
     public void tearDown() throws Exception {
         try {
@@ -131,13 +170,6 @@ public class AtomicCreateUpdateTest {
         } catch (Throwable e) {
             // I don't care.
         }
-    }
-
-    @Test
-    public void shouldQueryDbForFriends() throws IOException {
-        //Response response = service.getFriends("B", db);
-        //List list = objectMapper.readValue((String) response.getEntity(), List.class);
-        //assertEquals(new HashSet<String>(Arrays.asList("A", "C")), new HashSet<String>(list));
     }
 
     public GraphDatabaseService graphdb() {
