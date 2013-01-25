@@ -80,7 +80,9 @@ any valid URL path fragment you can mount the extension URLs anywhere you would 
 
 The plugins provides two endpoints, one for 'upserting' nodes and one for 'upconnecting' edges.
 
-### /atomic/upsert/{index_name}/{index_key}/{index_value}
+### Upsert
+
+/atomic/upsert/{index_name}/{index_key}/{index_value}
 
 #### Description
 
@@ -89,6 +91,7 @@ the node already exists the properties are merged into the existing node propert
 operation.
 
 #### Methods
+
 POST
 
 #### Parameters
@@ -107,3 +110,30 @@ POST
   <dd>Should be valid JSON containing properties to set on node.
 </dl>
 
+### Upconnect
+
+/atomic/upconnect
+
+#### Methods
+
+POST
+
+#### Parameters
+
+All parameters are sent in the POST body, encoded as JSON
+
+<dl>
+  <dt>from
+  <dd>Neo4j URI of node where edge begins.
+
+  <dt>to
+  <dd>Neo4j URI of node where edge ends.
+
+
+  <dt>relationship_type
+  <dd>String specifying edge type to create.
+
+  <dt>properties
+  <dd>Dictionary of property key/value pairs to store with edge.
+
+</dl>
