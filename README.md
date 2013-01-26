@@ -70,7 +70,7 @@ then edit $NEO4J_PATH/conf/neo4j-server.properties and find the line
 uncomment it edit it to look like:
 
 ```
-org.neo4j.server.thirdparty_jaxrs_classes=com.okcupidlabs.neo4j.server.plugins=/atomic
+org.neo4j.server.thirdparty_jaxrs_classes=com.okcupidlabs.neo4j.server.plugins=/okcl
 ```
 
 This informs the Neo4j server to mount our extension API endpoints anchored from the server root /.  By changing "/" to
@@ -83,7 +83,7 @@ The plugins provides two endpoints, one for 'upserting' nodes and one for 'upcon
 ### Upsert
 - - -
 
-`/atomic/upsert/{index_name}/{index_key}/{index_value}`
+`okcl/atomic/upsert/{index_name}/{index_key}/{index_value}`
 
 #### Description
 
@@ -114,7 +114,7 @@ POST
 ### Upconnect
 - - -
 
-`/atomic/upconnect`
+`okcl/atomic/upconnect`
 
 #### Methods
 
