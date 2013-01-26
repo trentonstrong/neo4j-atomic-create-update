@@ -70,7 +70,7 @@ then edit $NEO4J_PATH/conf/neo4j-server.properties and find the line
 uncomment it edit it to look like:
 
 ```
-org.neo4j.server.thirdparty_jaxrs_classes=com.okcupidlabs.neo4j.server.plugins=/
+org.neo4j.server.thirdparty_jaxrs_classes=com.okcupidlabs.neo4j.server.plugins=/atomic
 ```
 
 This informs the Neo4j server to mount our extension API endpoints anchored from the server root /.  By changing "/" to
