@@ -22,7 +22,9 @@ import org.neo4j.server.rest.web.DatabaseActions;
 import org.neo4j.server.rest.web.PropertyValueException;
 
 
-//An extension to the Neo4j Server for atomically creating or updating nodes/edges if they already exist.
+/**
+ * Class containing JAX-RS endpoints for atomically 'upserting' and 'upconnecting' nodes and edges.
+ */
 @Path("/")
 public class AtomicCreateUpdate {
 
@@ -51,7 +53,16 @@ public class AtomicCreateUpdate {
 
     }
 
-    // Creates or patches a node given a unique index key and value for the node.
+    /**
+     * Inserts or updates a new node by first determining whether that node exists by using a lookup index.
+     *
+     * @param force Force mode for transaction, normally used internally.
+     * @param indexName Name of index to use for lookup
+     * @param indexKey Index key to utilize for lookup
+     * @param indexValue Index value to utilize for lookup.  Should be unique per index/key.
+     * @param body JSON encoded properties to insert/merge with node properties.
+     * @return JSON representation of node.
+     */
     @POST
     @Path("/upsert/{index_name}/{index_key}/{index_value}")
     public Response upsertNode(
@@ -89,6 +100,13 @@ public class AtomicCreateUpdate {
         return output.ok(new NodeRepresentation(upsertedNode));
     }
 
+    /***
+     * Connects two nodes if an edge of the given type does not already exist between them, otherwise updates the
+     * edge properties.
+     * @param force Force mode for transaction, normally used internally.
+     * @param body JSON encoded parameters.  See docs for specific details.
+     * @return JSON representation of edge.
+     */
     @POST
     @Path("/upconnect")
     public Response upconnectNodes(
@@ -124,6 +142,15 @@ public class AtomicCreateUpdate {
         return output.ok(new RelationshipRepresentation(upconnectedRelationship));
     }
 
+    /**
+     * Atomically creates or updates a an edge, utilizing Neo4j transactional locking.
+     * @param fromNode Node to attach outgoing side of edge
+     * @param toNode Node to attach incoming side of edge
+     * @param type Edge type
+     * @param properties Key/value pairs to associate with edge
+     * @return The created or updated relationship
+     * @throws PropertyValueException
+     */
     private Relationship createOrUpdateRelationship(
             final Node fromNode,
             final Node toNode,
@@ -163,6 +190,11 @@ public class AtomicCreateUpdate {
         return relationship;
     }
 
+    /**
+     * Parses a node id from a Neo4j REST node URI.
+     * @param uri URI to a given node
+     * @return Node ID
+     */
     private long parseNodeIdFromURI(URI uri)
     {
         String path = uri.getPath();
@@ -170,6 +202,11 @@ public class AtomicCreateUpdate {
         return Long.parseLong(idStr);
     }
 
+    /**
+     * Validates that required parameters are supplied in upconnect property map
+     * @param properties Map containing supplied parameters to upconnect endpoint
+     * @return False if any required keys are missing
+     */
     private boolean ensureRequiredUpconnectParameters(Map<String, Object> properties)
     {
         return properties.containsKey("from") &&
@@ -179,6 +216,11 @@ public class AtomicCreateUpdate {
     }
 
 
+    /**
+     * Helper method for generating response when required upconnect parameters are missing
+     * @param properties Map containing supplied parametes to upconnect endpoint
+     * @return Response representing failed conditions on upconnect endpoint
+     */
     private Response missingUpconnectParameters(Map<String, Object> properties)
     {
         String[] receivedParams = properties.keySet().toArray(new String[0]);

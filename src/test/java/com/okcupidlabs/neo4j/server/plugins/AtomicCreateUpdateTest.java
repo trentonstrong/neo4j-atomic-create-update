@@ -28,6 +28,7 @@ import java.io.IOException;
 
 import static org.junit.Assert.assertEquals;
 
+
 public class AtomicCreateUpdateTest {
 
     private static final String BASE_URI = "http://neo4j.org/";
