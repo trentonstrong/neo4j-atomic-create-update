@@ -23,7 +23,7 @@ import org.neo4j.server.rest.web.PropertyValueException;
 
 
 //An extension to the Neo4j Server for atomically creating or updating nodes/edges if they already exist.
-@Path("/atomic")
+@Path("/")
 public class AtomicCreateUpdate {
 
     private static final String REQUIRED_PARAMETERS = "from, to, relationship_type, properties";
@@ -62,7 +62,7 @@ public class AtomicCreateUpdate {
                 final String body)
     {
         if (!this.service.index().existsForNodes(indexName)) {
-            throw new IllegalArgumentException("Index with index_name: " + indexKey + " does not exist.");
+            throw new IllegalArgumentException("Index with index_name: " + indexName + " does not exist.");
         }
 
         UniqueFactory<Node> nodeFactory = new UniqueFactory.UniqueNodeFactory(service, indexName)
