@@ -62,7 +62,8 @@ public class AtomicCreateUpdate {
                 final String body)
     {
         if (!this.service.index().existsForNodes(indexName)) {
-            throw new IllegalArgumentException("Index with index_name: " + indexName + " does not exist.");
+            return output.badRequest(
+                    new IllegalArgumentException("Index with index_name: " + indexName + " does not exist."));
         }
 
         UniqueFactory<Node> nodeFactory = new UniqueFactory.UniqueNodeFactory(service, indexName)
