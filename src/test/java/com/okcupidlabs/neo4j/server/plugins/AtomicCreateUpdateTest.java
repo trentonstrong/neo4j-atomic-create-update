@@ -77,6 +77,7 @@ public class AtomicCreateUpdateTest {
             Node personB = createPerson(db, "B");
             Node personC = createPerson(db, "C");
             Node personD = createPerson(db, "D");
+            Node personZ = createPerson(db, "Z"); // unconnected member
             personA.createRelationshipTo(personB, KNOWS);
             personB.createRelationshipTo(personC, KNOWS);
             personC.createRelationshipTo(personD, KNOWS);
@@ -143,6 +144,26 @@ public class AtomicCreateUpdateTest {
         assertTrue(personA.hasRelationship(LIKES, Direction.OUTGOING));
         assertTrue(personB.hasRelationship(LIKES, Direction.INCOMING));
     }
+
+    @Test
+    public void shouldUpconnectTwoNodesWhenOtherRelationshipsExist() {
+        Node personA = this.graphdb().index().forNodes("people").get("name", "A").getSingle();
+        Node personZ = this.graphdb().index().forNodes("people").get("name", "Z").getSingle();
+        long personAId = personA.getId();
+        long personZId = personZ.getId();
+        final String testRequest = "{" +
+                "\"from\": \"" + makeNodeUrl(personAId) + "\", " +
+                "\"to\": \""   + makeNodeUrl(personZId) + "\", " +
+                "\"relationship_type\": \"" + KNOWS.name() + "\", " +
+                "\"properties\": {}"
+                + "}";
+        final Response response = service.upconnectNodes(FORCE, testRequest);
+
+        assertTrue(personA.hasRelationship(KNOWS, Direction.OUTGOING));
+        assertTrue(personZ.hasRelationship(KNOWS, Direction.INCOMING));
+
+    }
+
 
     @Test
     public void shouldPatchExistingRelationship() {
