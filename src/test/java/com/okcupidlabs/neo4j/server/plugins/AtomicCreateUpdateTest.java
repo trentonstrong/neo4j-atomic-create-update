@@ -25,6 +25,7 @@ import java.net.URI;
 import java.net.URISyntaxException;
 
 import java.io.IOException;
+import java.util.Map;
 
 import static org.junit.Assert.assertEquals;
 
@@ -95,23 +96,24 @@ public class AtomicCreateUpdateTest {
         return node;
     }
 
-    @Test(expected = IllegalArgumentException.class)
+    @Test
     public void shouldThrowIfIndexMissing() {
-        service.upsertNode(FORCE, "things", "foo", "bar", "bangin body");
+        final Response response = service.upsertNode(FORCE, AtomicCreateUpdateTestFixtures.THINGS_FOO_BAR_FIXTURE);
+        assertEquals(400, response.getStatus());
     }
 
-    @Test()
+    @Test
     public void shouldCreateNewNode() {
-       final Response response = service.upsertNode(FORCE, "people", "name", "E", "{ \"name\": \"E\" }");
-       assertEquals(response.getStatus(), 200);
-       Node created = this.graphdb().index().forNodes("people").get("name", "E").getSingle();
-       assertNotNull(created);
-       assertEquals(created.getProperty("name"), "E");
+        final Response response = service.upsertNode(FORCE, AtomicCreateUpdateTestFixtures.PEOPLE_NAME_E_FIXTURE);
+        assertEquals(response.getStatus(), 200);
+        Node created = this.graphdb().index().forNodes("people").get("name", "E").getSingle();
+        assertNotNull(created);
+        assertEquals(created.getProperty("name"), "E");
     }
 
-    @Test()
+    @Test
     public void shouldUpdateExistingNode() {
-        final Response response = service.upsertNode(FORCE, "people", "name", "A", "{ \"foo\": \"bar\" }");
+        final Response response = service.upsertNode(FORCE, AtomicCreateUpdateTestFixtures.PEOPLE_NAME_A_FOO_BAR_FIXTURE);
         assertEquals(response.getStatus(), 200);
         Node updated = this.graphdb().index().forNodes("people").get("name", "A").getSingle();
         assertEquals(updated.getProperty("name"), "A");

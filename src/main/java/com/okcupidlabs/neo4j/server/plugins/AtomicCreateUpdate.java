@@ -28,7 +28,9 @@ import org.neo4j.server.rest.web.PropertyValueException;
 @Path("/")
 public class AtomicCreateUpdate {
 
-    private static final String REQUIRED_PARAMETERS = "from, to, relationship_type, properties";
+    private static final String[] REQUIRED_UPSERT_PARAMETERS = {"index_name", "index_key", "index_value","properties"};
+    private static final String[] REQUIRED_UPCONNECT_PARAMETERS = {"from", "to", "relationship_type", "properties"};
+
 
     private final UriInfo uriInfo;
     private final InputFormat input;
@@ -57,21 +59,38 @@ public class AtomicCreateUpdate {
      * Inserts or updates a new node by first determining whether that node exists by using a lookup index.
      *
      * @param force Force mode for transaction, normally used internally.
-     * @param indexName Name of index to use for lookup
-     * @param indexKey Index key to utilize for lookup
-     * @param indexValue Index value to utilize for lookup.  Should be unique per index/key.
-     * @param body JSON encoded properties to insert/merge with node properties.
-     * @return JSON representation of node.
+     * @param
+     * @param body JSON encoded parameters.
+     *             Required:
+     *             - index_name: Name of index to use for lookup
+     *             - index_key: Index key to utilize for lookup
+     *             - index_value: Index value to utilize for lookup.  Should be unique per index/key.
+     *             - properties: Map of node properties to insert/merge
+     *
+     * @return JSON representation of node. (See: http://docs.neo4j.org/chunked/milestone/rest-api-node-properties.html)
      */
     @POST
-    @Path("/upsert/{index_name}/{index_key}/{index_value}")
+    @Path("/upsert")
     public Response upsertNode(
                 final @HeaderParam("Transaction") ForceMode force,
-                final @PathParam("index_name") String indexName,
-                final @PathParam("index_key") String indexKey,
-                final @PathParam("index_value") String indexValue,
                 final String body)
     {
+        final Map<String, Object> properties;
+        try {
+            properties = input.readMap(body);
+        } catch (BadInputException e) {
+            return output.badRequest(e);
+        }
+
+        if(!ensureRequiredParameters(properties, REQUIRED_UPSERT_PARAMETERS)) {
+            return missingParameters(properties, REQUIRED_UPSERT_PARAMETERS);
+        }
+
+        final String indexName = (String)properties.get("index_name");
+        final String indexKey = (String)properties.get("index_key");
+        final String indexValue = (String)properties.get("index_value");
+        final Map<String, Object> nodeProperties = (Map<String, Object>)properties.get("properties");
+
         if (!this.service.index().existsForNodes(indexName)) {
             return output.badRequest(
                     new IllegalArgumentException("Index with index_name: " + indexName + " does not exist."));
@@ -88,7 +107,7 @@ public class AtomicCreateUpdate {
 
         final Node upsertedNode = nodeFactory.getOrCreate(indexKey, indexValue);
         try {
-            this.propertySetter.setProperties(upsertedNode, input.readMap(body));
+            this.propertySetter.setProperties(upsertedNode, nodeProperties);
         } catch (BadInputException e) {
 
             return output.badRequest(e);
@@ -104,7 +123,13 @@ public class AtomicCreateUpdate {
      * Connects two nodes if an edge of the given type does not already exist between them, otherwise updates the
      * edge properties.
      * @param force Force mode for transaction, normally used internally.
-     * @param body JSON encoded parameters.  See docs for specific details.
+     * @param body JSON encoded parameters.
+     *             Required:
+     *             - from: Name of index to use for lookup
+     *             - to: Index key to utilize for lookup
+     *             - relationship_type: Index value to utilize for lookup.  Should be unique per index/key.
+     *             - properties: Map of node properties to insert/merge
+     *
      * @return JSON representation of edge.
      */
     @POST
@@ -120,8 +145,8 @@ public class AtomicCreateUpdate {
             return output.badRequest(e);
         }
 
-        if(!ensureRequiredUpconnectParameters(properties)) {
-            return missingUpconnectParameters(properties);
+        if(!ensureRequiredParameters(properties, REQUIRED_UPCONNECT_PARAMETERS)) {
+            return missingParameters(properties, REQUIRED_UPCONNECT_PARAMETERS);
         }
 
         long fromId = parseNodeIdFromURI(URI.create((String) properties.get("from")));
@@ -207,23 +232,34 @@ public class AtomicCreateUpdate {
      * @param properties Map containing supplied parameters to upconnect endpoint
      * @return False if any required keys are missing
      */
-    private boolean ensureRequiredUpconnectParameters(Map<String, Object> properties)
+    private boolean ensureRequiredParameters(Map<String, Object> properties, String ... requiredKeys)
     {
-        return properties.containsKey("from") &&
-                properties.containsKey("to") &&
-                properties.containsKey("relationship_type") &&
-                properties.containsKey("properties");
-    }
+        for (String key : requiredKeys) {
+            if (properties.get(key) == null) {
+                return false;
+            }
+        }
 
+        return true;
+    }
 
     /**
      * Helper method for generating response when required upconnect parameters are missing
      * @param properties Map containing supplied parametes to upconnect endpoint
      * @return Response representing failed conditions on upconnect endpoint
      */
-    private Response missingUpconnectParameters(Map<String, Object> properties)
+    private Response missingParameters(Map<String, Object> properties, String ... requiredKeys)
     {
         String[] receivedParams = properties.keySet().toArray(new String[0]);
+
+        return Response.status( 400 )
+                .type(MediaType.TEXT_PLAIN)
+                .entity("Required parameters: " + implode(requiredKeys) + "\n"
+                      + "Received parameters: " + implode(receivedParams))
+                .build();
+    }
+
+    private static String implode(String[] receivedParams) {
         String receivedParamString = "";
         if (receivedParams.length > 0) {
             StringBuilder sb = new StringBuilder();
@@ -235,12 +271,7 @@ public class AtomicCreateUpdate {
             }
             receivedParamString = sb.toString();
         }
-
-        return Response.status( 400 )
-                .type(MediaType.TEXT_PLAIN)
-                .entity("Required parameters: " + REQUIRED_PARAMETERS + "\n"
-                      + "Received parameters: " + receivedParamString)
-                .build();
+        return receivedParamString;
     }
 
     private Response badJsonFormat(String body) {

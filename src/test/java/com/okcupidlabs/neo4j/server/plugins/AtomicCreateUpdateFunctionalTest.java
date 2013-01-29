@@ -36,16 +36,16 @@ public class AtomicCreateUpdateFunctionalTest {
     }
 
     @Test
-    public void shouldReturn500IfIndexDoesNotExist() throws IOException {
+    public void shouldReturn400IfIndexDoesNotExist() throws IOException {
         RestRequest restRequest = new RestRequest(server.baseUri().resolve(MOUNT_POINT), CLIENT);
-        JaxRsResponse response = restRequest.post("atomic/upsert/things/foo/bar", "{}");
-        assertEquals(response.getStatus(), 500);
+        JaxRsResponse response = restRequest.post("upsert", AtomicCreateUpdateTestFixtures.THINGS_FOO_BAR_FIXTURE);
+        assertEquals(400, response.getStatus());
     }
 
     @Test
     public void shouldCreateNode() throws IOException {
         RestRequest restRequest = new RestRequest(server.baseUri().resolve(MOUNT_POINT), CLIENT);
-        JaxRsResponse response = restRequest.post("atomic/upsert/people/name/E", "{ \"name\": \"E\" }");
+        JaxRsResponse response = restRequest.post("upsert", AtomicCreateUpdateTestFixtures.PEOPLE_NAME_E_FIXTURE);
         assertEquals(response.getStatus(), 200);
         System.out.println(response.getEntity());
         HashMap responseMap = objectMapper.readValue(response.getEntity(), java.util.HashMap.class);
