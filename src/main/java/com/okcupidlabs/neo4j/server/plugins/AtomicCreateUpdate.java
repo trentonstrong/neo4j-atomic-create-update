@@ -5,7 +5,6 @@ import java.net.URI;
 
 import javax.ws.rs.POST;
 import javax.ws.rs.Path;
-import javax.ws.rs.PathParam;
 import javax.ws.rs.HeaderParam;
 import javax.ws.rs.core.Context;
 import javax.ws.rs.core.Response;
@@ -183,7 +182,7 @@ public class AtomicCreateUpdate {
             final Map<String, Object> properties) throws PropertyValueException
     {
         // check if relationship exists first, if it does update properties and GTFO
-        Relationship relationship = fromNode.getSingleRelationship(type, Direction.OUTGOING);
+        Relationship relationship = getRelationshipBetweenNodes(fromNode, toNode, type);
         if (relationship != null) {
             this.propertySetter.setProperties(relationship, properties);
             return relationship;
@@ -194,7 +193,7 @@ public class AtomicCreateUpdate {
         Lock writeLock = tx.acquireWriteLock(fromNode);
 
         // check and see if we were beat to the lock, if so update and GTFO
-        relationship = fromNode.getSingleRelationship(type, Direction.OUTGOING);
+        relationship = getRelationshipBetweenNodes(fromNode, toNode, type);
         if (relationship != null) {
             tx.finish();
             this.propertySetter.setProperties(relationship, properties);
@@ -213,6 +212,27 @@ public class AtomicCreateUpdate {
         }
 
         return relationship;
+    }
+
+    /**
+     * Retrieves a relationship of a given type between two nodes if it exists.
+     * @param fromNode Starting node
+     * @param toNode Ending node
+     * @param type Relationship type
+     * @return The relationship if it exists, null otherwise.
+     */
+    private Relationship getRelationshipBetweenNodes(Node fromNode, Node toNode, RelationshipType type)
+    {
+        // simple linear search over relationships of given type
+        Iterable<Relationship> relationships = fromNode.getRelationships(type, Direction.OUTGOING);
+        Relationship foundRelationship = null;
+        for (Relationship relationship : relationships) {
+            if (relationship.getEndNode().equals(toNode)) {
+                foundRelationship = relationship;
+                break;
+            }
+        }
+        return foundRelationship;
     }
 
     /**
