@@ -58,7 +58,6 @@ public class AtomicCreateUpdate {
      * Inserts or updates a new node by first determining whether that node exists by using a lookup index.
      *
      * @param force Force mode for transaction, normally used internally.
-     * @param
      * @param body JSON encoded parameters.
      *             Required:
      *             - index_name: Name of index to use for lookup
